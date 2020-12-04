@@ -1,0 +1,32 @@
+import fs from 'std/io/fs';
+let File = fs.File;
+
+let data: number[] = File.readAllText('data.txt')
+  .split('\n')
+  .map(Number.parse)
+  .into(List.collect);
+
+fn solution1(data: number[]) -> number | nil {
+  for x in data {
+    for y in data {
+      if x + y == 2020 {
+        return x * y;
+      }
+    }
+  }
+}
+
+fn solution2(data: number[]) -> number | nil {
+  for x in data {
+    for y in data {
+      for z in data {
+        if x + y + z == 2020 {
+          return x * y * z;
+        }
+      }
+    }
+  }
+}
+
+print(solution1(data));
+print(solution2(data));

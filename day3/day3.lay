@@ -1,0 +1,59 @@
+import fs from 'std/io/fs';
+import math from 'std/math';
+let File = fs.File;
+let rem = math.rem;
+
+let TREE = "#";
+
+fn checkSlope(grid: number[][], vertical: number, horizontal: number) -> number {
+  let width = grid[0].len();
+
+  let hIdx = 0;
+  let trees = 0;
+  let vIdx = 0;
+
+  while vIdx < grid.len() {
+    let row = grid[vIdx];
+    trees = trees + row[rem(hIdx, width)];
+    vIdx = vIdx + vertical;
+  }
+
+  return trees;
+}
+
+class Option {
+  init(horizontal, vertical) {
+    self.horizontal = horizontal;
+    self.vertical = vertical;
+  }
+}
+
+let grid: number[] = File
+  .readAllText('data.txt')
+  .split('\n')
+  .map(|row| row
+    .iter()
+    .map(|spot| {
+      if spot == TREE {
+        return 1;
+      } else {
+        return 0;
+      }
+    }).into(List.collect)
+  )
+  .into(List.collect);
+
+let options = [
+  Option(1, 1),
+  Option(3, 1),
+  Option(5, 1),
+  Option(7, 1),
+  Option(1, 2),
+];
+
+print(
+  options
+    .iter()
+    .map(|option| checkSlope(grid, option.vertical, option.horizontal))
+    .reduce(1, |acc, curr| acc * curr)
+);

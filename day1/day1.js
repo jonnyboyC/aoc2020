@@ -1,6 +1,6 @@
 const fs = require("fs");
-const file = fs.readFileSync("data.json", "utf8");
-const data = JSON.parse(file);
+const file = fs.readFileSync("data.txt", "utf8");
+const data = file.split("\n").map(Number.parseInt);
 
 if (!Array.isArray(data)) {
   process.exit(1);
