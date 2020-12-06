@@ -1,0 +1,114 @@
+import fs from 'std/io/fs';
+import re from 'std/regexp';
+let File = fs.File;
+let RegExp = re.RegExp;
+
+let byr = 'byr';
+let iyr = 'iyr';
+let eyr = 'eyr';
+let hgt = 'hgt';
+let hcl = 'hcl';
+let ecl = 'ecl';
+let pid = 'pid';
+
+let requireKeys = [byr, iyr, eyr, hgt, hcl, ecl, pid];
+
+type Predicate<T> = (x: T) -> bool;
+type Passport = Map<string, string>;
+
+fn toPassports(file: string) -> Passport[] {
+  let passports = [];
+  let current = {};
+
+  for line in file.split('\n') {
+    if line == '' {
+      passports.push(current);
+      current = {};
+      continue;
+    }
+
+    for entries in line.split(' ') {
+      let pair = entries.split(':').into(List.collect);
+      current[pair[0]] = pair[1];
+    }
+  }
+
+  passports.push(current);
+
+  return passports;
+}
+
+fn _and<T>(funcs: Predicate<T>[]) -> Predicate<T> {
+  return |x| funcs.iter().all(|func| {
+    return func(x);
+  });
+}
+
+fn valid<T>(pattern: string, key: string) -> Predicate<T> {
+  return |x| {
+    let reg = RegExp(pattern);
+    return reg.test(x[key]);
+  };
+}
+
+fn inRange(lower: number, upper: number) -> Predicate<number> {
+  return |x| lower <= x and upper >= x;
+}
+
+let birthRange = inRange(1920, 2002);
+let issueRange = inRange(2010, 2020);
+let expireRange = inRange(2020, 2030);
+let cmRange = inRange(150, 193);
+let inchRange = inRange(59, 76);
+
+fn parsedPred(func: Predicate<number>, key: string) -> Predicate<string> {
+  return |x| func(Number.parse(x[key]));
+}
+
+fn validHeight(passport: Passport) -> bool {
+  let height = passport[hgt];
+  let pattern = RegExp('(\\d+)([a-z]+)');
+  let captures = pattern.captures(height);
+
+  if captures[2] == 'cm' {
+    return cmRange(Number.parse(captures[1]));
+  }
+
+  if captures[2] == 'in' {
+    return inchRange(Number.parse(captures[1]));
+  }
+
+  return false;
+}
+
+fn hasFields(passport: Passport) -> bool {
+  return requireKeys.iter().all(|key| passport.has(key));
+}
+
+let validFields = _and([
+  _and([valid('^\\d{4}$', byr), parsedPred(birthRange, byr)]),
+  _and([valid('^\\d{4}$', iyr), parsedPred(issueRange, iyr)]),
+  _and([valid('^\\d{4}$', eyr), parsedPred(expireRange, eyr)]),
+  _and([valid('^(\\d{3}cm|\\d{2}in)$', hgt), validHeight]),
+  valid('^#[0-9a-f]{6}$', hcl),
+  valid('^(amb|blu|brn|gry|grn|hzl|oth)$', ecl),
+  valid('^\\d{9}$', pid),
+]);
+
+let file = File.readAllText('data.txt');
+  
+let passports = toPassports(file);
+let hasValidFields = passports
+  .iter()
+  .map(hasFields)
+  .filter(|x| x)
+  .len();
+
+let hasValidPassports = passports
+  .iter()
+  .map(_and([hasFields, validFields]))
+  .filter(|x| x)
+  .len();
+
+print(hasValidFields);
+print(hasValidPassports);
