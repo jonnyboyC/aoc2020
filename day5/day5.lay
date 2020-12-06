@@ -1,0 +1,91 @@
+import fs from 'std/io/fs';
+import math from 'std/math';
+let File = fs.File;
+
+class Position {
+  init(row, seat) {
+    self.row = row;
+    self.seat = seat;
+  }
+
+  str() {
+    return "row: " + self.row + " seat: " + self.seat;
+  }
+}
+
+fn calcPosition(positive: string) -> (pos: string) -> number {
+  fn position_inner(pos_iter: Iter<string>, remaining: number) -> number {
+    let val = 0;
+    if pos_iter.current == positive {
+      val = remaining;
+    }
+
+    if remaining == 1 {
+      return val;
+    }
+
+    pos_iter.next();
+    return val + position_inner(pos_iter, remaining / 2);
+  }
+
+  fn position(pos: string) {
+    return position_inner(pos.iter(), math.pow(2, pos.len()));
+  }
+
+  return position;
+}
+
+let rowPosition = calcPosition('B');
+let seatPosition = calcPosition('R');
+
+fn calcId(position: Position) -> number {
+  let row = rowPosition(position.row);
+  let seat = seatPosition(position.seat); 
+  return row * 8 + seat;
+}
+
+fn solve1(positions: Position) {
+  return positions.iter().reduce(0, |curr, position| {
+    let id = calcId(position);
+
+    if curr > id {
+      return curr;
+    } else {
+      return id;
+    }
+  });
+}
+
+fn solve2(positions: Position) {
+  let ids = positions
+    .iter()
+    .map(|position| calcId(position))
+    .into(List.collect);
+
+  ids = ids.sort(|a, b| a - b);
+
+  let idsIter = ids.iter();
+  
+  idsIter.next();
+  let lastId = idsIter.current;
+
+  for id in idsIter {
+    if id - lastId > 1 {
+      return lastId + 1;
+    }
+    lastId = id;
+  }
+
+  return nil;
+}
+
+let file = File.readAllText('data.txt');
+let positions = file
+  .split('\n')
+  .filter(|x| x.len() > 0)
+  .map(|line| Position(line.slice(0, 7), line.slice(7)))
+  .into(List.collect);
+
+print(solve1(positions));
+print(solve2(positions));
+

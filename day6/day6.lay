@@ -1,0 +1,37 @@
+import fs from 'std/io/fs';
+let File = fs.File;
+
+let file = File.readAllText('data.txt');
+let groups = file.split('\n\n').into(List.collect);
+
+let answers1 = groups
+  .iter()
+  .map(|line| line
+    .split('\n')
+    .reduce({}, |acc, line| {
+      line.iter().each(|answer| acc[answer] = nil);
+      return acc;
+    })
+    .iter()
+    .len()
+  )
+  .reduce(0, |acc, curr| acc + curr);
+
+let answers2 = groups
+  .iter()
+  .map(|line| {
+    let responses = line.split('\n').into(List.collect);
+    return responses
+      .iter()
+      .reduce({}, |acc, line| {
+        line.iter().each(|answer| acc[answer] = (acc.get(answer) or 0) + 1);
+        return acc;
+      })
+      .iter()
+      .filter(|kvp| kvp[1] == responses.len())
+      .len();
+  })
+  .reduce(0, |acc, curr| acc + curr);
+
+print(answers1);
+print(answers2);
