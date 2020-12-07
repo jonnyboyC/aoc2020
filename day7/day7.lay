@@ -1,0 +1,131 @@
+import fs from 'std/io/fs';
+import re from 'std/regexp';
+let File = fs.File;
+let RegExp = re.RegExp;
+
+let nodePattern = RegExp('^\\w+ \\w+');
+let edgePattern = RegExp('(\\d+) (\\w+ \\w+)');
+
+class Graph {
+  nodes: Map<string, Node>;
+
+  init() {
+    self.nodes = {};
+  }
+
+  getNode(name: string) -> Node {
+    return self.nodes[name];
+  }
+
+  addNode(name: string, node: Node) {
+    self.nodes[name] = node;
+  }
+
+  invert() -> Graph {
+    let inverted = Graph();
+    for kvp in self.nodes {
+      inverted.addNode(kvp[0], Node(kvp[0]));
+    }
+
+    for kvp in self.nodes {
+      let sink = inverted.getNode(kvp[0]);
+
+      for edge in kvp[1].edges {
+        let source = inverted.getNode(edge.sink.name);
+        let newEdge = Edge(edge.weight, sink);
+        source.addEdge(newEdge);
+      }
+    }
+
+    return inverted;
+  }
+
+  str() -> string {
+    return self.nodes.str();
+  }
+}
+
+class Node {
+  name: string;
+  edges: Edge[];
+
+  init(name: string) {
+    self.name = name;
+    self.edges = [];
+  }
+
+  addEdge(edge: Edge) {
+    self.edges.push(edge);
+  }
+
+  str() -> string {
+    return self.name + " -> [" + self.edges.len().str() + "]";
+  }
+}
+
+class Edge {
+  weight: number;
+  sink: Node;
+
+  init(weight: number, sink: Node) {
+    self.weight = weight;
+    self.sink = sink;
+  }
+
+  str() -> string {
+    return self.sink.name + ": " + self.weight.str();
+  }
+}
+
+fn createGraph(lines: string[]) -> Graph {
+  let graph = lines.iter().reduce(Graph(), |graph, line| {
+    let nodeStr = nodePattern.match(line);
+    graph.addNode(nodeStr, Node(nodeStr));
+    return graph;
+  });
+
+  lines.iter().each(|line| addEdge(line, graph));
+  return graph;
+}
+
+fn addEdge(line: string, graph: Graph) {
+  let split = line.split('contain').into(List.collect);
+  let nodeStr = nodePattern.match(split[0]);
+
+  if split[1].has('no other bags') {
+    return;
+  }
+
+  let node = graph.getNode(nodeStr);
+  for edge in split[1].split(',') {
+    let edgeCaptures = edgePattern.captures(edge);
+    node.addEdge(Edge(Number.parse(edgeCaptures[1]), graph.getNode(edgeCaptures[2])));
+  }
+}
+
+fn search(node: Node, visited: Map<string, nil>) {
+  visited.set(node.name, nil);
+
+  let sum = 1;
+  for edge in node.edges {
+    sum = sum + edge.weight * search(edge.sink, visited);
+  }
+
+  return sum;
+}
+
+let file = File.readAllText('data.txt');
+let ruleLines = file.split('\n').into(List.collect);
+
+let graph = createGraph(ruleLines);
+
+let invertedGraph = graph.invert();
+
+let visitedInverted = {};
+search(invertedGraph.getNode('shiny gold'), visitedInverted);
+
+let visited = {};
+let contained = search(graph.getNode('shiny gold'), visited);
+
+print(visitedInverted.len() - 1);
+print(contained - 1);
