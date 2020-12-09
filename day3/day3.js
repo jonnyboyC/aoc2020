@@ -31,7 +31,7 @@ function checkSlope(grid, vertical, horizontal) {
 
 const option = (horizontal, vertical) => ({ vertical, horizontal });
 
-const data = readFileSync("data.txt", "utf8");
+const data = readFileSync("input.txt", "utf8");
 const grid = toTreeGrid(data);
 
 const options = [

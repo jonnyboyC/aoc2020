@@ -58,7 +58,7 @@ class PasswordSet {
   }
 }
 
-let data = File.readAllText("data.txt");
+let data = File.readAllText("input.txt");
 print(
   data
     .split('\n')

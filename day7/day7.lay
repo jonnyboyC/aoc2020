@@ -113,7 +113,7 @@ fn search(node: Node, visited: Map<string, nil>) {
   return sum;
 }
 
-let file = File.readAllText('data.txt');
+let file = File.readAllText('input.txt');
 let ruleLines = file.split('\n').into(List.collect);
 
 let graph = createGraph(ruleLines);

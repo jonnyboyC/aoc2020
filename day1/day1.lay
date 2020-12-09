@@ -1,7 +1,7 @@
 import fs from 'std/io/fs';
 let File = fs.File;
 
-let data: number[] = File.readAllText('data.txt')
+let data: number[] = File.readAllText('input.txt')
   .split('\n')
   .map(Number.parse)
   .into(List.collect);

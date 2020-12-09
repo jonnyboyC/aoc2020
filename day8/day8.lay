@@ -107,7 +107,7 @@ fn part2(insts: Instruction[]) {
   }
 }
 
-let source = File.readAllText('data.txt');
+let source = File.readAllText('../aoc2020/day8/input.txt');
 let insts = parse(source);
 print(part1(insts));
 print(part2(insts));

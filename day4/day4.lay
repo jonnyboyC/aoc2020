@@ -95,7 +95,7 @@ let validFields = _and([
   valid('^\\d{9}$', pid),
 ]);
 
-let file = File.readAllText('data.txt');
+let file = File.readAllText('input.txt');
   
 let passports = toPassports(file);
 let hasValidFields = passports

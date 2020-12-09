@@ -40,7 +40,7 @@ class PasswordSet {
   }
 }
 
-const data = readFileSync("data.txt", "utf8");
+const data = readFileSync("input.txt", "utf8");
 console.log(
   data
     .split(EOL)

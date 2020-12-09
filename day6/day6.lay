@@ -1,7 +1,7 @@
 import fs from 'std/io/fs';
 let File = fs.File;
 
-let file = File.readAllText('data.txt');
+let file = File.readAllText('input.txt');
 let groups = file.split('\n\n').into(List.collect);
 
 let answers1 = groups

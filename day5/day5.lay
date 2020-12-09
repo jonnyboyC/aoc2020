@@ -79,7 +79,7 @@ fn solve2(positions: Position) {
   return nil;
 }
 
-let file = File.readAllText('data.txt');
+let file = File.readAllText('input.txt');
 let positions = file
   .split('\n')
   .filter(|x| x.len() > 0)

@@ -29,7 +29,7 @@ class Option {
 }
 
 let grid: number[] = File
-  .readAllText('data.txt')
+  .readAllText('input.txt')
   .split('\n')
   .map(|row| row
     .iter()
