@@ -84,23 +84,22 @@ fn createGraph(lines: string[]) -> Graph {
     return graph;
   });
 
-  lines.iter().each(|line| addEdge(line, graph));
+  for line in lines {
+    let split = line.split('contain').into(List.collect);
+    let nodeStr = nodePattern.match(split[0]);
+
+    if split[1].has('no other bags') {
+      continue;
+    }
+
+    let node = graph.getNode(nodeStr);
+    for edge in split[1].split(',') {
+      let edgeCaptures = edgePattern.captures(edge);
+      node.addEdge(Edge(Number.parse(edgeCaptures[1]), graph.getNode(edgeCaptures[2])));
+    }
+  }
+
   return graph;
-}
-
-fn addEdge(line: string, graph: Graph) {
-  let split = line.split('contain').into(List.collect);
-  let nodeStr = nodePattern.match(split[0]);
-
-  if split[1].has('no other bags') {
-    return;
-  }
-
-  let node = graph.getNode(nodeStr);
-  for edge in split[1].split(',') {
-    let edgeCaptures = edgePattern.captures(edge);
-    node.addEdge(Edge(Number.parse(edgeCaptures[1]), graph.getNode(edgeCaptures[2])));
-  }
 }
 
 fn search(node: Node, visited: Map<string, nil>) {
