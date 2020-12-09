@@ -1,0 +1,113 @@
+import fs from 'std/io/fs';
+let File = fs.File;
+
+class Jmp {
+  init(value) {
+    self.value = value;
+  }
+
+  swap() { return Nop(self.value); }
+  acc() { return 0; }
+  jmp() { return self.value; }
+}
+
+class Acc {
+  init(value) {
+    self.value = value;
+  }
+
+  swap() { return self; }
+  acc() { return self.value; }
+  jmp() { return 1; }
+}
+
+class Nop {
+  init(value) {
+    self.value = value;
+  }
+
+  swap() { return Jmp(self.value); }
+  acc() { return 0; }
+  jmp() { return 1; }
+}
+
+fn parse(source: string) -> () -> ()[] {
+  let insts = [];
+
+  for line in source.split('\n') {
+    let split = line.split(' ').into(List.collect);
+    let value = Number.parse(split[1]);
+
+    if split[0] == 'jmp' {
+      insts.push(Jmp(value));
+    } else if split[0] == 'acc'  {
+      insts.push(Acc(value));
+    } else if split[0] == 'nop' {
+      insts.push(Nop(value));
+    } else {
+      print('invalid instruction encounted');
+      exit(1);
+    }
+  }
+
+  return insts;
+}
+
+fn part1(insts: Instruction[]) {
+  let ip = 0;
+  let acc = 0;
+
+  let visited = [];
+  insts.len().times().each(|_| visited.push(false));
+
+  while true {
+    let inst = insts[ip];
+
+    if visited[ip + inst.jmp()] {
+      return acc;
+    }
+
+    ip = ip + inst.jmp();
+    acc = acc + inst.acc();
+    visited[ip] = true;
+  }
+}
+
+fn part2(insts: Instruction[]) {
+  let len = insts.len();
+  let visited = [];
+  len.times().each(|_| visited.push(false));
+
+  for i in len.times() {
+    let old = insts[i];
+    insts[i] = old.swap();
+
+    let ip = 0;
+    let acc = 0;
+    len.times().each(|i| visited[i] = false);
+
+    while true {
+      let inst = insts[ip];
+      let new_ip = ip + inst.jmp();
+
+      if new_ip > len - 1 {
+        return acc;
+      }
+
+      if visited[new_ip] {
+        break;
+      }
+
+      ip = new_ip;
+      acc = acc + inst.acc();
+      visited[ip] = true;
+    }
+
+    insts[i] = old;
+  }
+}
+
+let source = File.readAllText('data.txt');
+let insts = parse(source);
+print(part1(insts));
+print(part2(insts));
