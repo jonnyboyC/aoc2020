@@ -1,0 +1,94 @@
+import fs from 'std/io/fs';
+import math from 'std/math';
+let File = fs.File;
+
+class Cipher {
+  init(codes, insertIdx) {
+    self.codes = codes;
+    self.insertIdx = insertIdx;
+  }
+
+  cycle(code) {
+    self.codes[self.insertIdx] = code;
+    self.insertIdx = math.rem(self.insertIdx + 1, self.codes.len());
+  }
+
+  valid(code) {
+    for i in self.codes.len().times() {
+      for j in self.codes.len().times() {
+        if i == j {
+          continue;
+        }
+
+        if self.codes[i] + self.codes[j] == code {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+}
+
+fn part1(codes) {
+  let preamble = [];
+  let codesIter = codes.iter();
+  for i in 25.times() {
+    if !codesIter.next() {
+      print("Not enough codes for preamble.");
+      exit(1);
+    }
+    preamble.push(codesIter.current);
+  }
+
+  let cipher = Cipher(codes, 0);
+
+  for code in codesIter {
+    if !cipher.valid(code) {
+      return code;
+    }
+
+    cipher.cycle(code);
+  }
+
+  print("Could not find breakable code.");
+  exit(1);
+}
+
+
+fn part2(codes, weaknessPoint) {
+  for i in codes.len().times() {
+    let sum = 0;
+    let j = i;
+
+    while j < codes.len() and sum < weaknessPoint {
+      sum = sum + codes[j];
+      j = j + 1;
+    } 
+
+    if sum == weaknessPoint {
+      let chunk = codes.slice(i, j);
+      let min = chunk.iter().reduce(10e40, |min, curr| {
+        if min < curr { return min; } else { return curr; }
+      });
+
+      let max = chunk.iter().reduce(-10e40, |max, curr| {
+        if max > curr { return max; } else { return curr; }
+      });
+      return min + max;
+    }
+  }
+
+  print("Could not find breakable code.");
+  exit(1);
+}
+
+
+let source = File.readAllText('input.txt');
+let codes = source.split('\n').map(|x| Number.parse(x)).into(List.collect);
+
+let weaknessPoint = part1(codes);
+let weakness = part2(codes, weaknessPoint);
+
+print(weaknessPoint);
+print(weakness);
