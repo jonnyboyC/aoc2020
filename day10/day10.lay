@@ -1,0 +1,76 @@
+import fs from 'std/io/fs';
+let File = fs.File;
+
+fn allAdaptors(adaptors: number[]) -> number {
+  let sortedAdaptors = adaptors.slice();
+  sortedAdaptors.push(0);
+  sortedAdaptors = sortedAdaptors.sort(|a, b| Number.cmp(a, b));
+  sortedAdaptors.push(sortedAdaptors[sortedAdaptors.len() - 1] + 3);
+
+  return sortedAdaptors;
+}
+
+fn findCombinations(adaptors: number[]) -> number {
+  let cache = adaptors.iter().map(|_| nil).into(List.collect);
+
+  fn comboRecursive(adaptors: number[], idx: number) -> number {
+    if cache[idx] { 
+      return cache[idx];
+    }
+
+    fn comboRecursiveInner(adaptors: number[], idx: number) -> number {
+      if idx == adaptors.len() - 1 {
+        return 1;
+      }
+
+      let count = 0;
+      let start = adaptors[idx];
+      let startIdx = idx;
+      idx = idx + 1;
+
+      while idx < adaptors.len() {
+        if start + 3 < adaptors[idx] {
+          break;
+        }
+
+        count = count + comboRecursive(adaptors, idx);
+        idx = idx + 1;
+      }
+
+      return count;
+    }
+
+    
+    let result = comboRecursiveInner(adaptors, idx);
+    cache[idx] = result;
+
+    return result;
+  }
+
+  return comboRecursive;
+}
+
+fn part2(adaptors: number[]) -> number {
+  let sortedAdaptors = allAdaptors(adaptors);
+  let findCombos = findCombinations(sortedAdaptors);
+
+  return findCombos(sortedAdaptors, 0);
+}
+
+fn part1(adaptors: number[]) -> number {
+  let sortedAdaptors = allAdaptors(adaptors);
+  let deltas = [0, 0, 0];
+
+  sortedAdaptors.slice(1).iter().zip(sortedAdaptors.iter()).each(|pair| {
+    let delta = pair[0] - pair[1];
+    deltas[delta - 1] = deltas[delta - 1] + 1;
+  });
+
+  return deltas[0] * deltas[2];
+} 
+
+let source = File.readAllText('input.txt');
+let adaptors = source.split('\n').map(|x| Number.parse(x)).into(List.collect);
+
+print(part1(adaptors));
+print(part2(adaptors));
