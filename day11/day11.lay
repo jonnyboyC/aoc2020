@@ -1,0 +1,246 @@
+import fs from 'std/io/fs';
+let File = fs.File;
+
+trait Spot {
+  canChange() -> bool;
+  shouldStepAdjacent(count: number) -> bool;
+  shouldStepLine(count: number) -> bool;
+  step() -> Spot;
+  occupied() -> number;
+}
+
+class Floor {
+  canChange() { return false; }
+  shouldStepAdjacent(count: number) { return false; }
+  shouldStepLine(count: number) { return false; }
+  step() { return floor; }
+  occupied() { return 0; }
+  str() { return '.'; }
+}
+
+class EmptySeat {
+  canChange() { return true; }
+  shouldStepAdjacent(count: number) { return count == 0; }
+  shouldStepLine(count: number) { return count == 0; }
+  step() { return occupiedSeat; }
+  occupied() { return 0; }
+  str() { return 'L'; }
+}
+
+class OccupiedSeat {
+  canChange() { return true; }
+  shouldStepAdjacent(count: number) { return count >= 4; }
+  shouldStepLine(count: number) { return count >= 5; }
+  step() { return emptySeat; }
+  occupied() { return 1; }
+  str() { return '#'; }
+}
+
+let floor = Floor();
+let emptySeat = EmptySeat();
+let occupiedSeat = OccupiedSeat();
+
+let directionSet = [
+  [-1, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1],
+  [1, 0],
+  [1, -1],
+  [0, -1],
+];
+
+class Grid {
+  init(grid: Spot[], height, width) {
+    self.grid = grid;
+    self.height = height;
+    self.width = width;
+  }
+
+  stepAdjacent() -> Grid {
+    let nextGrid = [];
+    let altered = false;
+
+    for row in self.height.times() {
+      for column in self.width.times() {
+        let spot = self.grid[self.getIndex(row, column)];
+
+        if spot.canChange() {
+          let occupied = self.occupiedAdjacent(row, column);
+          if spot.shouldStepAdjacent(occupied) {
+            altered = true;
+            nextGrid.push(spot.step());
+          } else {
+            nextGrid.push(spot);
+          }
+
+        } else {
+          nextGrid.push(spot);
+        }
+      }
+    }
+
+    return [Grid(nextGrid, self.height, self.width), altered];
+  }
+
+  stepLine() -> Grid {
+    let nextGrid = [];
+    let altered = false;
+
+    for row in self.height.times() {
+      for column in self.width.times() {
+        let idx = self.getIndex(row, column);
+        let spot = self.grid[idx];
+
+        if spot.canChange() {
+          let occupied = self.occupiedLine(row, column);
+          if spot.shouldStepLine(occupied) {
+            altered = true;
+            nextGrid.push(spot.step());
+          } else {
+            nextGrid.push(spot);
+          }
+
+        } else {
+          nextGrid.push(spot);
+        }
+      }
+    }
+
+    return [Grid(nextGrid, self.height, self.width), altered];
+  }
+
+  getIndex(row, col) {
+    return (row * self.width + col);
+  }
+
+  occupiedAdjacent(row, col) {
+    let count = 0;
+    for deltaRow in [- 1, 0, 1] {
+      let neighborRow = row + deltaRow;
+      for deltaCol in [- 1, 0, 1] {
+        if deltaRow != 0 or deltaCol != 0 {
+          let neighborCol = col + deltaCol;
+
+          if neighborRow < 0 or neighborRow >= self.height {
+            continue;
+          }
+
+          if neighborCol < 0 or neighborCol >= self.width {
+            continue;
+          }
+
+          let idx = self.getIndex(neighborRow, neighborCol);
+          count = count + self.grid[idx].occupied();
+        }
+      }
+    }
+
+    return count;
+  }
+
+  occupiedLine(row, col) {
+    let sum = 0;
+    for direction in directionSet {
+      if (self.occupiedDirection(row, col, direction)) {
+        sum = sum + 1;
+      } 
+    }
+
+    return sum;
+  }
+
+  occupiedDirection(row, col, direction: number[]) -> bool {
+    let deltaRow = direction[0];
+    let deltaCol = direction[1];
+
+    let neighborRow = row + deltaRow;
+    let neighborCol = col + deltaCol;
+
+    while neighborRow >= 0 
+      and neighborCol >= 0 
+      and neighborRow < self.height
+      and neighborCol < self.width {
+
+      let idx = self.getIndex(neighborRow, neighborCol);
+      let spot = self.grid[idx];
+
+      if spot == occupiedSeat {
+        return true;
+      }
+      if spot == emptySeat {
+        return false;
+      }
+
+      neighborRow = neighborRow + deltaRow;
+      neighborCol = neighborCol + deltaCol;
+    }
+
+    return false;
+  }
+
+  str() {
+    let gridStr = '';
+    for row in self.height.times() {
+      let rowSlice = self.grid.slice(self.getIndex(row, 0), self.getIndex(row + 1, 0));
+      let rowStr = rowSlice.iter().reduce('', |str, spot| str + spot.str());
+      gridStr = gridStr + rowStr + '\n';
+    }
+
+    return gridStr;
+  }
+
+  static fromFile(input: string) -> Grid {
+    let grid = [];
+    let height = 0;
+    let width = 0;
+
+    for line in input.split('\n') {
+      height = height + 1;
+      width = line.len();
+
+      for char in line {
+        if char == 'L' {
+          grid.push(emptySeat);
+        } else if char == '#' {
+          grid.push(occupiedSeat);
+        } else {
+          grid.push(floor);
+        }
+      }
+    }
+
+    return Grid(grid, height, width);
+  }
+}
+
+fn part1(grid) {
+  let altered = true;
+  let updatedGrid = grid;
+  while altered {
+    let result = updatedGrid.stepAdjacent();
+    updatedGrid = result[0];
+    altered = result[1];
+  }
+
+  return updatedGrid.grid.iter().filter(|stop| stop == occupiedSeat).len();
+}
+
+
+fn part2(grid) {
+  let altered = true;
+  let updatedGrid = grid;
+  while altered {
+    let result = updatedGrid.stepLine();
+    updatedGrid = result[0];
+    altered = result[1];
+  }
+
+  return updatedGrid.grid.iter().filter(|stop| stop == occupiedSeat).len();
+}
+
+let input = File.readAllText('input.txt');
+let grid = Grid.fromFile(input);
+print(part1(grid));
+print(part2(grid));
