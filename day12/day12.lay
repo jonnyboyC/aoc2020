@@ -1,0 +1,247 @@
+import fs from 'std/io/fs';
+import re from 'std/regexp';
+import math from 'std/math';
+let File = fs.File;
+let RegExp = re.RegExp;
+
+class Vec {
+  init(data: number[]) {
+    self.data = data;
+  }
+
+  add(other: Vec) -> Vec {
+    return Vec([
+      self.data[0] + other.data[0],
+      self.data[1] + other.data[1],
+    ]);
+  }
+
+  scale(mag: number) -> Vec {
+    return Vec([
+      self.data[0] * mag,
+      self.data[1] * mag,
+    ]);
+  }
+
+  manhattan() -> number {
+    return math.abs(self.data[0]) + math.abs(self.data[1]);
+  }
+
+  str() {
+    return self.data.str();
+  }
+}
+
+class Matrix {
+  init(data: number[][]) {
+    self.data = data;
+  }
+
+  multi(other: Vec) -> Vec {
+    return Vec([
+      self.data[0][0] * other.data[0] + self.data[0][1] * other.data[1],
+      self.data[1][0] * other.data[0] + self.data[1][1] * other.data[1],
+    ]);
+  }
+
+  str() {
+    return self.data.str();
+  }
+}
+
+class ShipPart1 {
+  init(pos: Vec, heading: Vec) {
+    self.pos = pos;
+    self.heading = heading;
+  }
+
+  translate(vec: Vec) {
+    self.pos = self.pos.add(vec);
+  }
+
+  rotate(matrix: Matrix) {
+    self.heading = matrix.multi(self.heading);
+  }
+
+  forward(mag: number) {
+    self.pos = self.pos.add(self.heading.scale(mag));
+  }
+
+  str() {
+    return 'ShipPart1: pos: ' + self.pos.str() + ' heading: ' + self.heading.str();
+  }
+}
+
+
+class ShipPart2 {
+  init(pos: Vec, waypoint: Vec) {
+    self.pos = pos;
+    self.waypoint = waypoint;
+  }
+
+  translate(vec: Vec) {
+    self.waypoint = self.waypoint.add(vec);
+  }
+
+  rotate(matrix: Matrix) {
+    self.waypoint = matrix.multi(self.waypoint);
+  }
+
+  forward(mag: number) {
+    self.pos = self.pos.add(self.waypoint.scale(mag));
+  }
+
+  str() {
+    return 'ShipPart2: pos: ' + self.pos.str() + ' waypoint: ' + self.heading.str();
+  }
+}
+
+trait Op {
+  exec(ship: ShipPart1);
+}
+
+class Rotate {
+  init(matrix: Matrix) {
+    self.matrix = matrix;
+  }
+
+  exec(ship: ShipPart1) {
+    ship.rotate(self.matrix);
+  }
+
+  str() {
+    return 'Rotate: ' + self.matrix.str();
+  }
+}
+
+class Translate {
+  init(vec: Vec) {
+    self.vec = vec;
+  }
+
+  exec(ship: ShipPart1) {
+    ship.translate(self.vec);
+  }
+
+  str() {
+    return 'Translate: ' + self.vec.str();
+  }
+}
+
+class Forward {
+  init(mag: number) {
+    self.mag = mag;
+  }
+
+  exec(ship: ShipPart1) {
+    ship.forward(self.mag);
+  }
+
+  str() {
+    return 'Forward: ' + self.mag.str();
+  }
+}
+
+fn parseRotate(command: string, degrees: number) -> Rotate {
+  let adjustedDegrees;
+  if command == 'L' {
+    adjustedDegrees = degrees;
+  } else {
+    adjustedDegrees = 360 - degrees;
+  }
+
+  if adjustedDegrees == 90 { 
+    return Rotate(Matrix([
+      [0, -1],
+      [1, 0],
+    ]));
+  }
+  if adjustedDegrees == 180 {
+    return Rotate(Matrix([
+      [-1, 0],
+      [0, -1],
+    ]));  
+  }
+  if adjustedDegrees == 270 {
+    return Rotate(Matrix([
+      [0, 1],
+      [-1, 0],
+    ])); 
+  }
+
+  print('Unknown rotation');
+  exit(1);
+}
+
+fn parseTranslate(command: string, distance: number) -> Translate {
+  if command == 'E' {
+    return Translate(Vec([1, 0]).scale(distance));
+  }
+  if command == 'W' {
+    return Translate(Vec([-1, 0]).scale(distance));
+  }
+  if command == 'N' {
+    return Translate(Vec([0, 1]).scale(distance));
+  }
+  if command == 'S' {
+    return Translate(Vec([0, -1]).scale(distance));
+  }
+
+  print('Unknown command');
+  exit(1);
+}
+
+let translations = ['N', 'S', 'E', 'W'];
+let rotations = ['R', 'L'];
+
+fn parse(input: string) -> Op[] {
+  let ops = [];
+  let opCapture = RegExp('([A-Z])(\\d+)');
+
+  for line in input.split('\n') {
+    let capture = opCapture.captures(line);
+
+    let command = capture[1];
+    let value = Number.parse(capture[2]);
+
+    if translations.has(command) {
+      ops.push(parseTranslate(command, value));
+    } else if rotations.has(command) {
+      ops.push(parseRotate(command, value));
+    } else if command == 'F' {
+      ops.push(Forward(value));
+    } else {
+      print('unknown command');
+      exit(1);
+    }
+  }
+
+  return ops;
+}
+
+fn part1(ops: Op[]) {
+  let ship = ShipPart1(Vec([0, 0]), Vec([1, 0]));
+
+  for op in ops {
+    op.exec(ship);
+  }
+
+  return ship.pos.manhattan();
+}
+
+
+fn part2(ops: Op[]) {
+  let ship = ShipPart2(Vec([0, 0]), Vec([10, 1]));
+
+  for op in ops {
+    op.exec(ship);
+  }
+
+  return ship.pos.manhattan();
+}
+
+let input = File.readAllText('input.txt');
+let ops = parse(input);
+
+print(part1(ops));
+print(part2(ops));
