@@ -1,0 +1,167 @@
+import fs from 'std/io/fs';
+import re from 'std/regexp';
+import math from 'std/math';
+let File = fs.File;
+let RegExp = re.RegExp;
+
+let ENCODING_WIDTH = 36;
+
+class Init {
+  init(mask: string[], stores: Store[]) {
+    self.mask = mask;
+    self.stores = stores;
+  }
+}
+
+class Store {
+  init(address: number, value: number) {
+    self.address = address;
+    self.value = value;
+  }
+}
+
+fn encode(value: number, width: number) -> number[] {
+  let reamining = value;
+  let bits = [];
+
+  while reamining > 1 {
+    let bit = math.rem(reamining, 2);
+    bits.push(bit);
+    reamining = (reamining - bit) / 2;
+  }
+
+  bits.push(reamining);
+  (width - bits.len()).times().each(|_| bits.push(0));
+  return bits;
+} 
+
+fn decode(value: number[]) -> number {
+  let sum = 0;
+  let idx = 0;
+
+  for bit in value.iter() {
+    sum = sum + math.pow(2, idx) * bit;
+    idx = idx + 1;
+  }
+
+  return sum;
+}
+
+fn maskValue(mask: string[], value: number) -> number {
+  let bits = encode(value, ENCODING_WIDTH);
+  let maskedBits = [];
+
+  for pair in bits.iter().zip(mask.iter()) {
+    if pair[1] == '1' {
+      maskedBits.push(1);
+    } else if pair[1] == '0' {
+      maskedBits.push(0);
+    } else {
+      maskedBits.push(pair[0]);
+    }
+  }
+
+  return decode(maskedBits);
+}
+
+
+fn maskAddress(mask: string[], address: number) -> number[] {
+  let bits = encode(address, ENCODING_WIDTH);
+  let floatingBits = mask.iter().filter(|bit| bit == 'X').len();
+  let addresses = [];
+  let maskedBits = [];
+
+  for i in math.pow(2, floatingBits).times() {
+    let combos = encode(i, floatingBits).iter();
+    combos.next();
+
+    for pair in bits.iter().zip(mask.iter()) {
+      if pair[1] == '1' {
+        maskedBits.push(1);
+      } else if pair[1] == '0' {
+        maskedBits.push(pair[0]);
+      } else {
+        maskedBits.push(combos.current);
+        combos.next();
+      }
+    }
+
+    addresses.push(decode(maskedBits));
+    maskedBits.clear();
+  }
+
+  return addresses;
+}
+
+fn parse(input: string) -> Init[] {
+  let maskPattern = RegExp('mask = ((0|X|1){36})');
+  let storePattern = RegExp('mem\\[(\\d+)\\] = (\\d+)');
+
+  let inits = [];
+  let stores = [];
+  let mask = nil;
+
+  for line in input.split('\n') {
+    if line.has('mask') {
+      if mask {
+        inits.push(Init(mask, stores));
+      }
+      
+      let captures = maskPattern.captures(line);
+      mask = captures[1].iter().into(List.collect).rev();
+      stores = [];
+    } else {
+      let captures = storePattern.captures(line);
+      stores.push(Store(
+        Number.parse(captures[1]),
+        Number.parse(captures[2])
+      ));
+    }
+  }
+
+  inits.push(Init(mask, stores));
+  return inits;
+}
+
+fn part1(inits: Init[]) -> number {
+  let tape = {};
+
+  for init in inits {
+    for store in init.stores {
+      tape[store.address] = maskValue(init.mask, store.value);
+    }
+  }
+
+  let sum = 0;
+  for kvp in tape {
+    sum = sum + kvp[1];
+  }
+
+  return sum;
+}
+
+
+fn part2(inits: Init[]) -> number {
+  let tape = {};
+
+  for init in inits {
+    for store in init.stores {
+      for address in maskAddress(init.mask, store.address) {
+        tape[address] = store.value;
+      }
+    }
+  }
+
+  let sum = 0;
+  for kvp in tape {
+    sum = sum + kvp[1];
+  }
+
+  return sum;
+}
+
+let input = File.readAllText('input.txt');
+let inits = parse(input);
+
+print(part1(inits));
+print(part2(inits));

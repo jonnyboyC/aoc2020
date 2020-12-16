@@ -1,0 +1,105 @@
+import fs from 'std/io/fs';
+import math from 'std/math';
+let File = fs.File;
+
+class Schedule {
+  init(present: bool, internval: number | nil, delta: number) {
+    self.present = present;
+    self.internval = internval;
+    self.delta = delta;
+  }
+
+  str() -> string {
+    return "Schedule: present: " + self.present.str() + " internval: " + self.internval.str() + " delta: " + self.delta.str();
+  }
+
+  static missing(delta: number) -> Schedule {
+    return Schedule(false, nil, delta);
+  }
+
+  static present(internval: number, delta: number) -> Schedule {
+    return Schedule(true, internval, delta);
+  }
+}
+
+fn part1(earliest: number, schedules: Schedule[]) -> number {
+  let knownSchedules = schedules.iter().filter(|schedule| schedule.present).into(List.collect);
+
+  let earliestSchedule = knownSchedules.iter().reduce(knownSchedules[0], |min, curr| {
+    let currentArrival = (earliest / curr.internval).ceil() * curr.internval;
+    let minArrival = (earliest / min.internval).ceil() * min.internval;
+
+    if currentArrival < minArrival {
+      return curr;
+    } else {
+      return min;
+    }
+  });
+
+  let delay = ((earliest / earliestSchedule.internval).ceil() * earliestSchedule.internval) - earliest;
+  return earliestSchedule.internval * delay;
+}
+
+fn part2(earliest: number, schedule: Schedule[]) -> number {
+  let sortedSchedules = schedules
+    .iter()
+    .filter(|schedule| schedule.present)
+    .into(List.collect)
+    .sort(|a, b| -Number.cmp(a.internval, b.internval));
+
+  let base = sortedSchedules[0];
+  let rest = sortedSchedules.slice(1);
+  let idx = 1;
+  while true {
+    let total = base.internval * idx;
+
+    let found = true;
+    for schedule in rest {
+      let delta = schedule.delta - base.delta;
+      let target = total + delta;
+
+      if math.rem(target, schedule.internval) != 0 {
+        // print(base, schedule);
+        // print(total, target);
+
+        found = false;
+        break;
+      }
+    }
+
+    idx = idx + 1;
+    // if math.rem(idx, 5000) == 0 {
+      // print("Iteration: " + idx.str(), total);
+    // }
+
+    if found {
+      break;
+    }
+  }
+  
+  print(idx);
+  return sortedSchedules;
+}
+
+let lines = File.readAllText('input.txt')
+  .split('\n')
+  .into(List.collect);
+
+let earliest = Number.parse(lines[0]);
+let schedules = [];
+let index = 0;
+
+for value in lines[1].split(',') {
+  if value == 'x' {
+    schedules.push(Schedule.missing(index));
+  } else {
+    schedules.push(Schedule.present(Number.parse(value), index));
+  }
+  index = index + 1;
+}
+
+print(part1(earliest, schedules));
+
+for schedule in part2(earliest, schedules) {
+  print(schedule);
+}
