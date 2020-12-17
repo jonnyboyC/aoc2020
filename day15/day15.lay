@@ -1,0 +1,37 @@
+import fs from 'std/io/fs';
+let File = fs.File;
+
+fn bootstrap(numbers: number[]) -> Map<number, number> {
+  let record = {};
+  for i in (numbers.len() - 1).times() {
+    record[numbers[i]] = i + 1;
+  }
+
+  return record;
+}
+
+fn part1(numbers: number[], turns: number) -> number {
+  let record = bootstrap(numbers);
+  let last = numbers[numbers.len() - 1];
+
+  for i in (numbers.len() + 1).until(turns + 1) {
+    let next;
+    let previous = record.get(last);
+
+    if previous {
+      next = i - 1 - previous;
+    } else {
+      next = 0;
+    }
+
+    record[last] = i - 1;
+    last = next;
+  }
+
+  return last;
+}
+
+let numbers = File.readAllText('input.txt').split(',').map(|i| Number.parse(i)).into(List.collect);
+
+print(part1(numbers, 2020));
+print(part1(numbers, 30000000));
