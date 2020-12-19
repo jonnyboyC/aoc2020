@@ -1,0 +1,189 @@
+import fs from 'std/io/fs';
+import re from 'std/regexp';
+let File = fs.File;
+let RegExp = re.RegExp;
+
+class Input {
+  init(
+    constraints: Constraint,
+    myTicket: Ticket,
+    otherTickets: Ticket
+  ) {
+    self.constraints = constraints;
+    self.myTicket = myTicket;
+    self.otherTickets = otherTickets;
+  }
+}
+
+class Ticket {
+  init(values: number[]) {
+    self.values = values;
+  }
+}
+
+class Constraint {
+  init(name: string, lower: Range, upper: Range) {
+    self.name = name;
+    self.lower = lower;
+    self.upper = upper;
+  }
+
+  isValid(value: number) -> bool {
+    return self.lower.isValid(value) 
+      or self.upper.isValid(value);
+  }
+
+  str() -> string {
+    return self.name + ": " + self.lower.str() + " or " + self.upper.str(); 
+  }
+}
+
+class Range {
+  init(lower: number, upper: number) {
+    self.lower = lower;
+    self.upper = upper;
+  }
+
+  isValid(value: number) -> bool {
+    return self.lower <= value
+      and self.upper >= value;
+  }
+
+  str() -> string {
+    return self.lower.str() + "-" + self.upper.str();
+  }
+}
+
+fn parse(source: string) -> Input {
+  let sections = source.split('\n\n').into(List.collect);
+  let constraintPattern = RegExp('^(.*): (\\d+)-(\\d+) or (\\d+)-(\\d+)');
+  let constraints = [];
+
+  for constraint in sections[0].split('\n') {
+    let captures = constraintPattern.captures(constraint);
+    let values = captures
+      .slice(2)
+      .iter()
+      .map(|x| Number.parse(x))
+      .into(List.collect);
+
+    constraints.push(Constraint(
+      captures[1],
+      Range(values[0], values[1]),
+      Range(values[2], values[3]),
+    ));
+  }
+
+  fn parseTickets(section: string) {
+    return section.split('\n')
+      .into(List.collect)
+      .slice(1)
+      .iter()
+      .map(|line| Ticket(line.split(',').map(|x| Number.parse(x)).into(List.collect)))
+      .into(List.collect);
+  }
+
+  let myTicket = parseTickets(sections[1])[0];
+  let otherTickets = parseTickets(sections[2]);
+
+  return Input(constraints, myTicket, otherTickets);
+}
+
+fn selectValidTickets(input: Input) -> Ticket[] {
+  let validTickets = [];
+
+  for ticket in input.otherTickets {
+    if ticket.values.iter().all(|value| 
+      input.constraints
+        .iter()
+        .any(|constraint| constraint.isValid(value))) {
+      validTickets.push(ticket);
+    }
+  }
+
+  return validTickets;
+}
+
+fn solveCanidates(columnCanidates: Map<number, Map<Constraint, nil>>) -> Constraint[] {
+  let findLocked = |canidates| canidates.iter().reduce(canidates.iter().first(), |canidate, current| {
+    if canidate[1].len() < current[1].len() {
+      return canidate;
+    } else {
+      return current;
+    }
+  });
+
+  let solutions = {};
+  let locked;
+
+  while locked = findLocked(columnCanidates) {
+    columnCanidates.remove(locked[0]);
+    let constraint = locked[1].iter().first()[0];
+    solutions[constraint] = locked[0];
+
+    for kvp in columnCanidates {
+      if kvp[1].has(constraint) {
+        kvp[1].remove(constraint);
+      }
+    }
+  }
+
+  return solutions;
+}
+
+fn part1(input: Input) {
+  let errorRate = 0;
+
+  for ticket in input.otherTickets {
+    for value in ticket.values {
+      if input.constraints.iter().all(|constraint| !constraint.isValid(value)) {
+        errorRate = errorRate + value;
+      }
+    }
+  }
+
+  return errorRate;
+}
+
+fn part2(input: Input) {
+  let allTickets = [input.myTicket];
+  selectValidTickets(input).iter().each(|ticket| allTickets.push(ticket));
+  
+  let columnCanidates = {};
+  allTickets[0].values.len().times().each(|i| columnCanidates[i] = {});
+
+  for i in allTickets[0].values.len().times() {
+    let valid = 0;
+    let canidates = columnCanidates[i];
+
+    for constraint in input.constraints {
+      let valid = true;
+
+      for ticket in allTickets {
+        if !constraint.isValid(ticket.values[i]) {
+          valid = false;
+          break;
+        }
+      }
+
+      if valid {
+        canidates[constraint] = nil;
+      }
+    }
+  }
+
+  let fields = solveCanidates(columnCanidates);
+
+  return input.constraints
+    .iter()
+    .filter(|constraint| constraint.name.has('departure'))
+    .reduce(1, |acc, constraint| {
+      let index = fields[constraint];
+      return acc * input.myTicket.values[index]; 
+    });
+}
+
+let source = File.readAllText('input.txt');
+let input = parse(source);
+print(part1(input));
+print(part2(input));
